@@ -2,7 +2,7 @@
 
 import { encodedRedirect } from "@/utils/utils";
 import { createClient } from "@/utils/supabase/server";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 export const signUpAction = async (formData: FormData) => {
@@ -44,7 +44,7 @@ export const signInAction = async (formData: FormData) => {
   const password = formData.get("password") as string;
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data: authData, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
@@ -53,8 +53,29 @@ export const signInAction = async (formData: FormData) => {
     return encodedRedirect("error", "/sign-in", error.message);
   }
 
-  return redirect("/protected");
+  // 🔍 Fetch user role from your `users` table using the user id
+  const { data: userData, error: userError } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", authData.user.id)
+    .single();
+
+  if (userError || !userData) {
+    return encodedRedirect("error", "/sign-in", "User role not found");
+  }
+
+  // Store user role in cookie/session/local storage, depending on how you manage sessions
+  // Example: redirect based on role
+  if (userData.role === "IT") {
+    return redirect("/it-dashboard");
+  } else if (userData.role === "Clinic") {
+    return redirect("/clinic-dashboard");
+  }
+  
+
+  return redirect("/protected"); // fallback
 };
+
 
 export const forgotPasswordAction = async (formData: FormData) => {
   const email = formData.get("email")?.toString();

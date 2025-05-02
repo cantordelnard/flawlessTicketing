@@ -37,6 +37,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <HeaderAuth />
           <div>
                 {children}
               </div>
